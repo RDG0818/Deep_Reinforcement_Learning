@@ -47,8 +47,15 @@ class DQNAgent(nn.Module):
         observation = ptu.from_numpy(np.asarray(observation))[None]
 
         # TODO(student): get the action from the critic using an epsilon-greedy strategy
-        raise NotImplementedError
-        action = ...
+        if np.random.random() < epsilon:
+            action = np.random.randint(self.num_actions)
+            action = torch.tensor([action])  # Convert to tensor
+
+        else:
+            with torch.no_grad():
+                q_values = self.critic(observation)
+                action = q_values.argmax(dim=1)
+        return ptu.to_numpy(action).squeeze(0).item()
 
         return ptu.to_numpy(action).squeeze(0).item()
 
@@ -70,20 +77,26 @@ class DQNAgent(nn.Module):
         """
 
         # TODO(student): paste in your code from HW3, and make sure the return values exist
-        raise NotImplementedError
+        qa_values = self.critic(obs)
+        action = action.unsqueeze(-1)
+        q_values = qa_values.gather(1, action).squeeze(-1)
+
         with torch.no_grad():
-            next_qa_values = ...
+            next_qa_values = self.target_critic(next_obs)    
 
             if self.use_double_q:
-                next_action = ...
+                next_action = self.critic(next_obs).max(1)[1]
+                next_q_values = next_qa_values.gather(1, next_action.unsqueeze(-1)).squeeze(-1)
             else:
-                next_action = ...
+                next_q_values = next_qa_values.max(1)[0]
 
-            next_q_values = ...
+            batch_size = obs.size(0)
+
             assert next_q_values.shape == (batch_size,), next_q_values.shape
 
-            target_values = ...
+            target_values = reward + self.discount * next_q_values * (~ done)
             assert target_values.shape == (batch_size,), target_values.shape
+        loss = mse_loss(q_values, target_values)
 
         return (
             loss,
@@ -137,5 +150,8 @@ class DQNAgent(nn.Module):
         Update the DQN agent, including both the critic and target.
         """
         # TODO(student): paste in your code from HW3
+        if step % self.target_update_period == 0:
+            self.update_target_critic()
 
+        critic_stats = self.update_critic(obs, action, reward, next_obs, done)
         return critic_stats
