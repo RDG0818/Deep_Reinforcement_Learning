@@ -96,7 +96,7 @@ class DQNAgent(nn.Module):
 
             target_values = reward + self.discount * next_q_values * (~ done)
             assert target_values.shape == (batch_size,), target_values.shape
-        loss = mse_loss(q_values, target_values)
+        loss = nn.functional.mse_loss(q_values, target_values)
 
         return (
             loss,

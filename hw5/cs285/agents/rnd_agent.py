@@ -69,9 +69,12 @@ class RNDAgent(DQNAgent):
             # TODO(student): Compute RND bonus for batch and modify rewards
             target_features = self.rnd_target_net(observations)
             predicted_features = self.rnd_net(observations)
+
+            # Compute RND bonus as mean squared error between target and predicted features
             rnd_error = nn.functional.mse_loss(predicted_features, target_features, reduction='none').mean(dim=-1)
             assert rnd_error.shape == rewards.shape
             rewards = rewards.float() + self.rnd_weight * rnd_error
+
         metrics = super().update(observations, actions, rewards, next_observations, dones, step)
 
         # Update the RND network.
